@@ -18,6 +18,7 @@ const B64_BLOCK_BITS: usize = B64_BLOCK_BYTES * BYTE_BITS;
 
 const MAX_B64_PAD_CHARS: usize = B64_BLOCK_BYTES - 1;
 const B64_PAD_C: char = '=';
+const B64_PAD_B: u8 = B64_PAD_C as u8;
 
 fn ceil_div(n: usize, d: usize) -> usize {
     (n + d - 1) / d
@@ -102,6 +103,99 @@ fn base64_encode(bytes: &[u8]) -> String {
     s
 }
 
+fn char_diff(c: char, base_char: char) -> u8 {
+    assert!(c.is_ascii());
+    assert!(base_char.is_ascii());
+
+    let r = (c as u8) - (base_char as u8);
+
+    assert!(r <= B64_MAX);
+    r
+}
+
+fn base64_decode_char(c: char) -> u8 {
+    let b = match c {
+        n @ 'A'..='Z' => char_diff(n, 'A'),
+        n @ 'a'..='z' => char_diff(n, 'a') + 26,
+        n @ '0'..='9' => char_diff(n, '0') + 52,
+        '+' => 62,
+        '/' => 63,
+        // Special case for padding
+        '=' => 0,
+        _ => panic!("unreachable"),
+    };
+
+    assert!(b <= B64_MAX);
+    b
+}
+
+fn base64_decode_block(block: &[u8]) -> Vec<u8> {
+    let mut v = Vec::<u8>::with_capacity(B64_BLOCK_BYTES);
+    // Require correct Base64 padding.
+    // We might want to change this condition in future, to allow Base64 without padding.
+    assert!(block.len() == B64_BLOCK_CHARS);
+
+    let pad_count = match block {
+        [_, _, B64_PAD_B, B64_PAD_B] => 2,
+        [_, _, _, B64_PAD_B] => 1,
+        blk @ _ if blk.contains(&B64_PAD_B) => panic!("bad Base64 padding char"),
+        _ => 0,
+    };
+
+    // This isn't the best interface, but it's functional
+    let cb0 = base64_decode_char(block[0] as char);
+    let cb1 = base64_decode_char(block[1] as char);
+    let cb2 = base64_decode_char(block[2] as char);
+    let cb3 = base64_decode_char(block[3] as char);
+
+    let b0 = (cb0 & 0b111111) << 2 | (cb1 & 0b110000) >> 4;
+    let b1 = (cb1 & 0b001111) << 4 | (cb2 & 0b111100) >> 2;
+    let b2 = (cb2 & 0b000011) << 6 | (cb3 & 0b111111);
+
+    v.push(b0);
+    if pad_count < 2 {
+        v.push(b1);
+    }
+    if pad_count == 0 {
+        v.push(b2);
+    }
+
+    assert!(v.len() > 0);
+    assert!(v.len() <= B64_BLOCK_BYTES);
+    v
+}
+
+fn base64_decode(s: &str) -> Vec<u8> {
+    // Each 24 bit block turns 4 base64 characters into 3 bytes
+    // Round up the number of blocks
+    let b64_blocks = ceil_div(s.len() * B64_CHAR_BITS, B64_BLOCK_BITS);
+    let max_byte_count = b64_blocks * B64_BLOCK_BYTES;
+    let min_byte_count = match b64_blocks {
+        0 => 0,
+        _ => max_byte_count - MAX_B64_PAD_CHARS,
+    };
+
+    let mut found_pad = false;
+    let mut v = Vec::<u8>::with_capacity(max_byte_count);
+    // Assume that the string is ASCII Base64, we'll check during conversion
+    // This isn't the best interface, but it's functional
+    let blocks = s.as_bytes().chunks(B64_BLOCK_CHARS);
+    for block in blocks {
+        // If we've found padding before, the Base64 is malformed
+        assert!(!found_pad);
+
+        let mut r = base64_decode_block(&block);
+        assert!(r.len() <= B64_BLOCK_BYTES);
+        assert!(r.len() > 0);
+        found_pad = r.len() < B64_BLOCK_BYTES;
+        v.append(&mut r);
+    }
+
+    assert!(v.len() <= max_byte_count);
+    assert!(v.len() >= min_byte_count);
+    v
+}
+
 fn main() {
     // UTF-8 encoding and decoding
     let empty = "";
@@ -131,13 +225,31 @@ fn main() {
     println!("UTF-8 decoded: '{}'", rt_utf8_hello);
     assert!(hello == rt_utf8_hello);
 
-    // Base64 encoding
+    // Base64 encoding and decoding
     let b64_utf8_empty = base64_encode(&utf8_empty);
     println!("Base64 encoded UTF-8: '{}'", b64_utf8_empty);
+    let rt_b64_utf8_empty = base64_decode(&b64_utf8_empty);
+    println!("Base64 decoded UTF-8: '{:?}'", rt_b64_utf8_empty);
+    let rt_b64_empty = utf8_decode(&rt_b64_utf8_empty);
+    println!("UTF-8 and Base64 decoded: '{}'", rt_b64_empty);
+    assert!(utf8_empty == rt_b64_utf8_empty);
+    assert!(empty == rt_b64_empty);
 
     let b64_utf8_block = base64_encode(&utf8_block);
     println!("Base64 encoded UTF-8: '{}'", b64_utf8_block);
+    let rt_b64_utf8_block = base64_decode(&b64_utf8_block);
+    println!("Base64 decoded UTF-8: '{:?}'", rt_b64_utf8_block);
+    let rt_b64_block = utf8_decode(&rt_b64_utf8_block);
+    println!("UTF-8 and Base64 decoded: '{}'", rt_b64_block);
+    assert!(utf8_block == rt_b64_utf8_block);
+    assert!(block == rt_b64_block);
 
     let b64_utf8_hello = base64_encode(&utf8_hello);
     println!("Base64 encoded UTF-8: '{}'", b64_utf8_hello);
+    let rt_b64_utf8_hello = base64_decode(&b64_utf8_hello);
+    println!("Base64 decoded UTF-8: '{:?}'", rt_b64_utf8_hello);
+    let rt_b64_hello = utf8_decode(&rt_b64_utf8_hello);
+    println!("UTF-8 and Base64 decoded: '{}'", rt_b64_hello);
+    assert!(utf8_hello == rt_b64_utf8_hello);
+    assert!(hello == rt_b64_hello);
 }
