@@ -86,4 +86,17 @@ fn main() {
     println!("UTF-8 and Hex decoded: '{}'", rt_hex_hello);
     assert!(utf8_hello == rt_hex_utf8_hello);
     assert!(hello == rt_hex_hello);
+
+    // Test vectors
+    let hex_test = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
+    let b64_expected_test_output =
+        "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
+
+    println!("Hex test: '{}'", hex_test);
+    let bytes_test = hex::hex_decode(&hex_test);
+    println!("Hex decoded test: '{:?}'", bytes_test);
+    let b64_test = base64::base64_encode(&bytes_test);
+    println!("Base64 encoded test: '{}'", b64_test);
+    println!("Base64 expected output: '{}'", b64_expected_test_output);
+    assert!(b64_test == b64_expected_test_output);
 }
