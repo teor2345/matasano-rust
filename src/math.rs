@@ -3,11 +3,29 @@
 pub const BYTE_BITS: usize = 8;
 
 pub fn ceil_div(n: usize, d: usize) -> usize {
+    assert!(d > 0, "The divisor must not be zero");
+    assert!(
+        // n + d <= usize::MAX, but without overflow
+        n <= usize::MAX - d,
+        "The sum of the numerator {} and divisor {} must be less than or equal to usize::MAX ({})",
+        n,
+        d,
+        usize::MAX
+    );
+
     (n + d - 1) / d
 }
 
 pub fn exact_div(n: usize, d: usize) -> usize {
-    assert!(n % d == 0);
+    assert!(d > 0, "The divisor must not be zero");
+    assert!(
+        n % d == 0,
+        "Expected exact division, but {} / {} has remainder {}",
+        n,
+        d,
+        n % d
+    );
+
     n / d
 }
 
