@@ -1,4 +1,5 @@
 mod base64;
+mod hex;
 mod utf8;
 
 fn main() {
@@ -57,4 +58,32 @@ fn main() {
     println!("UTF-8 and Base64 decoded: '{}'", rt_b64_hello);
     assert!(utf8_hello == rt_b64_utf8_hello);
     assert!(hello == rt_b64_hello);
+
+    // Hex encoding and decoding
+    let hex_utf8_empty = hex::hex_encode(&utf8_empty);
+    println!("Hex encoded UTF-8: '{}'", hex_utf8_empty);
+    let rt_hex_utf8_empty = hex::hex_decode(&hex_utf8_empty);
+    println!("Hex decoded UTF-8: '{:?}'", rt_hex_utf8_empty);
+    let rt_hex_empty = utf8::utf8_decode(&rt_hex_utf8_empty);
+    println!("UTF-8 and Hex decoded: '{}'", rt_hex_empty);
+    assert!(utf8_empty == rt_hex_utf8_empty);
+    assert!(empty == rt_hex_empty);
+
+    let hex_utf8_block = hex::hex_encode(&utf8_block);
+    println!("Hex encoded UTF-8: '{}'", hex_utf8_block);
+    let rt_hex_utf8_block = hex::hex_decode(&hex_utf8_block);
+    println!("Hex decoded UTF-8: '{:?}'", rt_hex_utf8_block);
+    let rt_hex_block = utf8::utf8_decode(&rt_hex_utf8_block);
+    println!("UTF-8 and Hex decoded: '{}'", rt_hex_block);
+    assert!(utf8_block == rt_hex_utf8_block);
+    assert!(block == rt_hex_block);
+
+    let hex_utf8_hello = hex::hex_encode(&utf8_hello);
+    println!("Hex encoded UTF-8: '{}'", hex_utf8_hello);
+    let rt_hex_utf8_hello = hex::hex_decode(&hex_utf8_hello);
+    println!("Hex decoded UTF-8: '{:?}'", rt_hex_utf8_hello);
+    let rt_hex_hello = utf8::utf8_decode(&rt_hex_utf8_hello);
+    println!("UTF-8 and Hex decoded: '{}'", rt_hex_hello);
+    assert!(utf8_hello == rt_hex_utf8_hello);
+    assert!(hello == rt_hex_hello);
 }

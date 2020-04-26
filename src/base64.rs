@@ -1,4 +1,5 @@
 #[path = "math.rs"]
+#[allow(dead_code)]
 mod math;
 
 use math::BYTE_BITS;
