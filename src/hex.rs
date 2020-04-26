@@ -15,13 +15,10 @@ const HEX_BLOCK_CHARS: usize = 2;
 const HEX_BLOCK_BITS: usize = HEX_BLOCK_BYTES * BYTE_BITS;
 
 fn hex_encode_char(char_bits: u8) -> char {
-    // Implies char_bits.is_ascii()
-    assert!(char_bits <= HEX_MAX);
-
     match char_bits {
         n @ 0..=9 => math::add_to_char('0', n),
         n @ 10..=HEX_MAX => math::add_to_char('a', n - 10),
-        _ => panic!("unreachable"),
+        _ => unreachable!("Caller ensures that char_bits <= HEX_MAX"),
     }
 }
 

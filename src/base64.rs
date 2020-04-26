@@ -19,16 +19,13 @@ const B64_PAD_C: char = '=';
 const B64_PAD_B: u8 = B64_PAD_C as u8;
 
 fn base64_encode_char(char_bits: u8) -> char {
-    // Implies char_bits.is_ascii()
-    assert!(char_bits <= B64_MAX);
-
     match char_bits {
         n @ 0..=25 => math::add_to_char('A', n),
         n @ 26..=51 => math::add_to_char('a', n - 26),
         n @ 52..=61 => math::add_to_char('0', n - 52),
         62 => '+',
         63 => '/',
-        _ => panic!("unreachable"),
+        _ => unreachable!("Caller ensures that char_bits <= B64_MAX"),
     }
 }
 
@@ -98,9 +95,10 @@ fn base64_decode_char(c: char) -> u8 {
         '/' => 63,
         // Special case for padding
         '=' => 0,
-        _ => panic!("unreachable"),
+        _ => panic!("Invalid Base64 character"),
     };
 
+    // Should be unreachable
     assert!(b <= B64_MAX);
     b
 }
@@ -185,7 +183,7 @@ pub fn base64_decode(s: &str) -> Vec<u8> {
     let blocks = s.as_bytes().chunks(B64_BLOCK_CHARS);
     for block in blocks {
         // If we've found padding before, the Base64 is malformed
-        assert!(!found_pad);
+        assert!(!found_pad, "Invalid Base64 padding in mid-stream block");
 
         let mut r = base64_decode_block(&block);
         assert!(r.len() <= B64_BLOCK_BYTES);
