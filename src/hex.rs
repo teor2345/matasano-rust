@@ -56,12 +56,13 @@ pub fn hex_encode(bytes: &[u8]) -> String {
 fn hex_decode_char(c: char) -> u8 {
     let b = match c {
         n @ '0'..='9' => math::char_diff(n, '0'),
-        n @ 'a'..='z' => math::char_diff(n, 'a') + 10,
+        n @ 'a'..='f' => math::char_diff(n, 'a') + 10,
         // Also support uppercase hex
-        n @ 'A'..='Z' => math::char_diff(n, 'A') + 10,
-        _ => panic!("unreachable"),
+        n @ 'A'..='F' => math::char_diff(n, 'A') + 10,
+        _ => panic!("Invalid hex character"),
     };
 
+    // Should be unreachable
     assert!(b <= HEX_MAX);
     b
 }
