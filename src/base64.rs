@@ -111,11 +111,28 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
     // We might want to change this condition in future, to allow Base64 without padding.
     assert!(block.len() == B64_BLOCK_CHARS);
 
+    // There are only two valid paddings:
+    // ???=
+    // ??==
+    // where ? is a non-padding character.
     let pad_count = match block {
+        // The order of these patterns is significant
+        // Never allowed in the first two characters
+        [B64_PAD_B, _, _, _] => panic!("Invalid Base64 padding position in {:?}", block),
+        [_, B64_PAD_B, _, _] => panic!("Invalid Base64 padding position in {:?}", block),
+        // Only allowed in the second-last character, if the last character is also padding
         [_, _, B64_PAD_B, B64_PAD_B] => 2,
+        [_, _, B64_PAD_B, _] => panic!("Invalid Base64 padding position in {:?}", block),
+        // Allowed in the last character, if previous conditions don't match
         [_, _, _, B64_PAD_B] => 1,
-        blk @ _ if blk.contains(&B64_PAD_B) => panic!("bad Base64 padding char"),
-        _ => 0,
+        // There shouldn't be any padding at this point
+        _ if block.contains(&B64_PAD_B) => {
+            unreachable!("Previous cases should exhaustively cover all padding")
+        }
+        // No padding, if previous conditions don't match
+        [_, _, _, _] => 0,
+        // The previous conditions should be exhaustive
+        _ => unreachable!("block should be a 4-item slice"),
     };
 
     // This isn't the best interface, but it's functional
