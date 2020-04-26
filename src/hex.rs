@@ -93,3 +93,124 @@ pub fn hex_decode(s: &str) -> Vec<u8> {
     assert!(v.len() == byte_count);
     v
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ranges() {
+        assert_eq!(hex_encode(&[0]), "00");
+        assert_eq!(hex_encode(&[9]), "09");
+        assert_eq!(hex_encode(&[10]), "0a");
+        assert_eq!(hex_encode(&[15]), "0f");
+        assert_eq!(hex_encode(&[16]), "10");
+        assert_eq!(hex_encode(&[26]), "1a");
+        assert_eq!(hex_encode(&[160]), "a0");
+        assert_eq!(hex_encode(&[255]), "ff");
+
+        assert_eq!(hex_decode("00"), [0]);
+        assert_eq!(hex_decode("09"), [9]);
+        assert_eq!(hex_decode("0a"), [10]);
+        assert_eq!(hex_decode("0f"), [15]);
+        assert_eq!(hex_decode("10"), [16]);
+        assert_eq!(hex_decode("90"), [144]);
+        assert_eq!(hex_decode("a0"), [160]);
+        assert_eq!(hex_decode("f0"), [240]);
+        assert_eq!(hex_decode("ff"), [255]);
+    }
+
+    #[test]
+    fn decode_uppercase() {
+        assert_eq!(hex_decode("0A"), [10]);
+        assert_eq!(hex_decode("0F"), [15]);
+        assert_eq!(hex_decode("A0"), [160]);
+        assert_eq!(hex_decode("F0"), [240]);
+        assert_eq!(hex_decode("FF"), [255]);
+    }
+
+    #[test]
+    fn empty() {
+        assert_eq!(hex_encode(&[]), "");
+        assert_eq!(hex_decode(""), []);
+    }
+
+    #[test]
+    fn multi_block_string() {
+        assert_eq!(hex_decode("ffff"), [255, 255]);
+        assert_eq!(hex_encode(&[255, 255]), "ffff");
+
+        assert_eq!(hex_decode("1002"), [16, 2]);
+        assert_eq!(hex_encode(&[16, 2]), "1002");
+    }
+
+    #[test]
+    fn round_trip() {
+        let test_vector = "eeaf0023";
+        assert_eq!(hex_encode(&hex_decode(test_vector)), test_vector);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    fn invalid_hex_char_before_0() {
+        hex_decode("//");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    fn invalid_hex_char_after_9() {
+        hex_decode("::");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    #[allow(non_snake_case)]
+    fn invalid_hex_char_before_A() {
+        hex_decode("@@");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    #[allow(non_snake_case)]
+    fn invalid_hex_char_after_F() {
+        hex_decode("GG");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    fn invalid_hex_char_before_a() {
+        hex_decode("``");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    fn invalid_hex_char_after_f() {
+        hex_decode("gg");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid hex character")]
+    fn invalid_hex_char_multibyte_encoded_utf8() {
+        hex_decode("\u{00E9}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Expected exact division")]
+    fn invalid_hex_char_multibyte_decoded_utf8() {
+        hex_decode("\u{2192}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Expected exact division")]
+    fn invalid_hex_truncated() {
+        hex_decode("f");
+    }
+
+    #[test]
+    #[should_panic(expected = "Expected exact division")]
+    fn invalid_hex_truncated_multiblock() {
+        hex_decode("aaa");
+    }
+
+    // Encoding out-of-range integers won't compile
+}

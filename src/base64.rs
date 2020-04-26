@@ -196,3 +196,196 @@ pub fn base64_decode(s: &str) -> Vec<u8> {
     assert!(v.len() >= min_byte_count);
     v
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ranges() {
+        assert_eq!(base64_decode("AAAA"), [0, 0, 0]);
+        assert_eq!(base64_decode("ZAAA"), [25 << 2, 0, 0]);
+        assert_eq!(base64_decode("aAAA"), [26 << 2, 0, 0]);
+        assert_eq!(base64_decode("zAAA"), [51 << 2, 0, 0]);
+        assert_eq!(base64_decode("0AAA"), [52 << 2, 0, 0]);
+        assert_eq!(base64_decode("9AAA"), [61 << 2, 0, 0]);
+        assert_eq!(base64_decode("+AAA"), [62 << 2, 0, 0]);
+        assert_eq!(base64_decode("/AAA"), [63 << 2, 0, 0]);
+
+        assert_eq!(base64_encode(&[0, 0, 0]), "AAAA");
+        assert_eq!(base64_encode(&[0, 0, 25]), "AAAZ");
+        assert_eq!(base64_encode(&[0, 0, 26]), "AAAa");
+        assert_eq!(base64_encode(&[0, 0, 51]), "AAAz");
+        assert_eq!(base64_encode(&[0, 0, 52]), "AAA0");
+        assert_eq!(base64_encode(&[0, 0, 61]), "AAA9");
+        assert_eq!(base64_encode(&[0, 0, 62]), "AAA+");
+        assert_eq!(base64_encode(&[0, 0, 63]), "AAA/");
+    }
+
+    #[test]
+    fn empty() {
+        assert_eq!(base64_encode(&[]), "");
+        assert_eq!(base64_decode(""), []);
+    }
+
+    #[test]
+    fn multi_block_string() {
+        assert_eq!(base64_decode("////AAAA"), [255, 255, 255, 0, 0, 0]);
+        assert_eq!(base64_encode(&[255, 255, 255, 0, 0, 0]), "////AAAA");
+
+        assert_eq!(base64_decode("BAAAAAAC"), [1 << 2, 0, 0, 0, 0, 2]);
+        assert_eq!(base64_encode(&[1 << 2, 0, 0, 0, 0, 2]), "BAAAAAAC");
+    }
+
+    #[test]
+    fn padding() {
+        assert_eq!(base64_encode(&[0]), "AA==");
+        assert_eq!(base64_encode(&[0, 0]), "AAA=");
+
+        assert_eq!(base64_decode("gA=="), [32 << 2]);
+        assert_eq!(base64_decode("gg=="), [(32 << 2) + (32 >> 4)]);
+
+        assert_eq!(base64_decode("AAg="), [0, 32 >> 2]);
+        assert_eq!(base64_decode("Agg="), [32 >> 4, 32 >> 2]);
+    }
+
+    #[test]
+    fn round_trip() {
+        let test_vector = "AZaz09+/";
+        assert_eq!(base64_encode(&base64_decode(test_vector)), test_vector);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_before_plus() {
+        base64_decode("****");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_after_plus() {
+        base64_decode(",,,,");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_before_slash() {
+        base64_decode("....");
+    }
+
+    // In ASCII, slash is before 0
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_after_9() {
+        base64_decode("::::");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    #[allow(non_snake_case)]
+    fn invalid_base64_char_before_A() {
+        base64_decode("@@@@");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    #[allow(non_snake_case)]
+    fn invalid_base64_char_after_Z() {
+        base64_decode("[[[[");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_before_a() {
+        base64_decode("````");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_after_z() {
+        base64_decode("{{{{");
+    }
+
+    #[test]
+    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    fn invalid_base64_char_multibyte_encoded_utf8() {
+        base64_decode("\u{00E9}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_multibyte_encoded_utf8_twice() {
+        base64_decode("\u{00E9}\u{00E9}");
+    }
+
+    #[test]
+    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    fn invalid_base64_char_multibyte_decoded_utf8() {
+        base64_decode("\u{2192}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 character")]
+    fn invalid_base64_char_multibyte_decoded_utf8_twice() {
+        base64_decode("\u{2192}\u{2192}");
+    }
+
+    #[test]
+    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    fn invalid_base64_truncated() {
+        base64_decode("A");
+    }
+
+    #[test]
+    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    fn invalid_base64_truncated_multiblock() {
+        base64_decode("AAAAAA");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 padding position")]
+    fn invalid_base64_pad_first_in_block() {
+        base64_decode("====");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 padding position")]
+    fn invalid_base64_pad_second_in_block() {
+        base64_decode("A===");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 padding position")]
+    fn invalid_base64_pad_mid_block() {
+        base64_decode("AA=A");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid Base64 padding in mid-stream block")]
+    fn invalid_base64_pad_mid_stream() {
+        base64_decode("AAA=AAAA");
+    }
+
+    #[test]
+    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    fn invalid_base64_pad_trailing_block() {
+        base64_decode("AAAA=");
+    }
+
+    #[test]
+    #[should_panic(expected = "Trailing Base64 bits ignored")]
+    fn invalid_base64_pad_trailing_bits_1_byte() {
+        // This decodes to 0b100000 0b000001, but the output is only one byte, so the final 4 bits must be zero
+        base64_decode("gB==");
+    }
+
+    #[test]
+    #[should_panic(expected = "Trailing Base64 bits ignored")]
+    fn invalid_base64_pad_trailing_bits_2_bytes() {
+        // This decodes to 0b100000 0b000000 0b000010, but the output is only two bytes, so the final two bits must be zero
+        base64_decode("gAC=");
+    }
+
+    // Encoding out-of-range integers won't compile
+}
