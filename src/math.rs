@@ -1,3 +1,5 @@
+//! Integer and character mathematical utility functions
+
 pub const BYTE_BITS: usize = 8;
 
 pub fn ceil_div(n: usize, d: usize) -> usize {

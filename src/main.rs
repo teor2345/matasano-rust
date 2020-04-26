@@ -1,3 +1,5 @@
+//! Matasano Cryptopals Challenges
+
 mod base64;
 mod hex;
 mod utf8;

@@ -1,3 +1,5 @@
+//! UTF-8 encoding and decoding
+
 pub fn utf8_encode(s: &str) -> Vec<u8> {
     s.bytes().collect()
 }

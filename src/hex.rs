@@ -1,3 +1,5 @@
+//! Hex encoding and decoding
+
 #[path = "math.rs"]
 #[allow(dead_code)]
 mod math;
