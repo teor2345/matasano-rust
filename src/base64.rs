@@ -148,9 +148,19 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
     v.push(b0);
     if pad_count < 2 {
         v.push(b1);
+    } else {
+        assert!(
+            b1 == 0,
+            "Trailing Base64 bits ignored in last character due to padding"
+        );
     }
     if pad_count == 0 {
         v.push(b2);
+    } else {
+        assert!(
+            b2 == 0,
+            "Trailing Base64 bits ignored in last character due to padding"
+        );
     }
 
     assert!(v.len() > 0);
