@@ -19,7 +19,7 @@ fn hex_encode_char(char_bits: u8) -> char {
     match char_bits {
         n @ 0..=9 => math::add_to_char('0', n),
         n @ 10..=HEX_MAX => math::add_to_char('a', n - 10),
-        _ => unreachable!("Caller ensures that char_bits <= HEX_MAX"),
+        _ => unreachable!("Caller must ensure that char_bits <= HEX_MAX"),
     }
 }
 
@@ -70,7 +70,10 @@ fn hex_decode_block(block: &[u8]) -> u8 {
     // We might want to change this condition in future, to allow trailing hex nybbles.
     assert!(block.len() == HEX_BLOCK_CHARS);
 
-    // This isn't the best interface, but it's functional
+    // The caller should ensure that these are ASCII
+    assert!((block[0] as char).is_ascii());
+    assert!((block[1] as char).is_ascii());
+
     let cb0 = hex_decode_char(block[0] as char);
     let cb1 = hex_decode_char(block[1] as char);
 
@@ -78,14 +81,16 @@ fn hex_decode_block(block: &[u8]) -> u8 {
 }
 
 pub fn hex_decode(s: &str) -> Vec<u8> {
+    // Hex strings must be ASCII
+    assert!(s.is_ascii(), "Invalid hex string");
+
     // Each 8 bit block turns 2 hex characters into 1 byte
     // This division must be exact.
     // We might want to change this condition in future, to allow trailing hex nybbles.
     let byte_count = math::exact_div(s.len() * HEX_CHAR_BITS, HEX_BLOCK_BITS);
 
     let mut v = Vec::<u8>::with_capacity(byte_count);
-    // Assume that the string is ASCII hex, we'll check during conversion
-    // This isn't the best interface, but it's functional
+    // Since the string is ASCII, we can safely iterate over its bytes.
     let blocks = s.as_bytes().chunks(HEX_BLOCK_CHARS);
     for block in blocks {
         v.push(hex_decode_block(block));
@@ -190,13 +195,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid hex character")]
+    #[should_panic(expected = "Invalid hex string")]
     fn invalid_hex_char_multibyte_encoded_utf8() {
         hex_decode("\u{00E9}");
     }
 
     #[test]
-    #[should_panic(expected = "Expected exact division")]
+    #[should_panic(expected = "Invalid hex string")]
     fn invalid_hex_char_multibyte_decoded_utf8() {
         hex_decode("\u{2192}");
     }

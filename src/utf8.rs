@@ -48,13 +48,17 @@ mod tests {
 
     #[test]
     fn multibyte_char() {
-        assert_eq!(utf8_encode("é"), [0b11000011, 0b10101001]);
-        assert_eq!(utf8_decode(&[0b11000011, 0b10101001]), "é");
+        assert_eq!(utf8_encode("\u{00E9}"), [0b11000011, 0b10101001]);
+        assert_eq!(utf8_decode(&[0b11000011, 0b10101001]), "\u{00E9}");
 
-        assert_eq!(utf8_encode("Caféteria"),
-                   [67, 97, 102, 0b11000011, 0b10101001, 116, 101, 114, 105, 97]);
-        assert_eq!(utf8_decode(&[67, 97, 102, 0b11000011, 0b10101001, 116, 101, 114, 105, 97]),
-                   "Caféteria");
+        assert_eq!(
+            utf8_encode("Caf\u{00E9}teria"),
+            [67, 97, 102, 0b11000011, 0b10101001, 116, 101, 114, 105, 97]
+        );
+        assert_eq!(
+            utf8_decode(&[67, 97, 102, 0b11000011, 0b10101001, 116, 101, 114, 105, 97]),
+            "Caf\u{00E9}teria"
+        );
     }
 
     #[test]

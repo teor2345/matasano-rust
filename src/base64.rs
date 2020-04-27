@@ -134,7 +134,12 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
         _ => unreachable!("block should be a 4-item slice"),
     };
 
-    // This isn't the best interface, but it's functional
+    // The caller should ensure that these are ASCII
+    assert!((block[0] as char).is_ascii());
+    assert!((block[1] as char).is_ascii());
+    assert!((block[2] as char).is_ascii());
+    assert!((block[3] as char).is_ascii());
+
     let cb0 = base64_decode_char(block[0] as char);
     let cb1 = base64_decode_char(block[1] as char);
     let cb2 = base64_decode_char(block[2] as char);
@@ -168,6 +173,9 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
 }
 
 pub fn base64_decode(s: &str) -> Vec<u8> {
+    // Base64 strings must be ASCII
+    assert!(s.is_ascii(), "Invalid Base64 string");
+
     // Each 24 bit block turns 4 base64 characters into 3 bytes
     // Round up the number of blocks
     let b64_blocks = math::ceil_div(s.len() * B64_CHAR_BITS, B64_BLOCK_BITS);
@@ -179,11 +187,10 @@ pub fn base64_decode(s: &str) -> Vec<u8> {
 
     let mut found_pad = false;
     let mut v = Vec::<u8>::with_capacity(max_byte_count);
-    // Assume that the string is ASCII Base64, we'll check during conversion
-    // This isn't the best interface, but it's functional
+    // Since the string is ASCII, we can safely iterate over its bytes.
     let blocks = s.as_bytes().chunks(B64_BLOCK_CHARS);
     for block in blocks {
-        // If we've found padding before, the Base64 is malformed
+        // If we've found padding in a previous block, the Base64 is malformed
         assert!(!found_pad, "Invalid Base64 padding in mid-stream block");
 
         let mut r = base64_decode_block(&block);
@@ -309,25 +316,25 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    #[should_panic(expected = "Invalid Base64 string")]
     fn invalid_base64_char_multibyte_encoded_utf8() {
         base64_decode("\u{00E9}");
     }
 
     #[test]
-    #[should_panic(expected = "Invalid Base64 character")]
+    #[should_panic(expected = "Invalid Base64 string")]
     fn invalid_base64_char_multibyte_encoded_utf8_twice() {
         base64_decode("\u{00E9}\u{00E9}");
     }
 
     #[test]
-    #[should_panic(expected = "B64_BLOCK_CHARS")]
+    #[should_panic(expected = "Invalid Base64 string")]
     fn invalid_base64_char_multibyte_decoded_utf8() {
         base64_decode("\u{2192}");
     }
 
     #[test]
-    #[should_panic(expected = "Invalid Base64 character")]
+    #[should_panic(expected = "Invalid Base64 string")]
     fn invalid_base64_char_multibyte_decoded_utf8_twice() {
         base64_decode("\u{2192}\u{2192}");
     }
