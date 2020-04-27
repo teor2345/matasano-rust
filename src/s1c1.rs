@@ -1,5 +1,7 @@
 //! Set 1, Challenge 1, Matasano Cryptopals Challenges
 
+#![deny(missing_docs)]
+
 // I don't want to create duplicate modules here. But I can't get "crate" to work.
 #[path = "base64.rs"]
 #[allow(dead_code)]
@@ -8,12 +10,14 @@ mod base64;
 #[allow(dead_code)]
 mod hex;
 
-// Test vectors for 1.1
+/// Input hex test vector for 1.1
 const HEX_TEST: &'static str =
     "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
+/// Expected output Base64 test vector for 1.1
 const B64_EXPECTED_TEST_OUTPUT: &'static str =
     "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
 
+/// Check the test vectors for 1.1
 pub fn check() {
     println!("Hex test: '{}'", HEX_TEST);
     let bytes_test = hex::hex_decode(&HEX_TEST);

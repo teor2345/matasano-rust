@@ -1,5 +1,7 @@
 //! Base64 encoding and decoding
 
+#![deny(missing_docs)]
+
 // I don't want to create a duplicate module here. But I can't get "crate" to work.
 #[path = "math.rs"]
 #[allow(dead_code)]
@@ -7,18 +9,28 @@ mod math;
 
 use math::BYTE_BITS;
 
+/// The number of bits in a Base64 digit
 const B64_CHAR_BITS: usize = 6;
 
+/// The maximum value of a Base64 digit
 const B64_MAX: u8 = (1u8 << B64_CHAR_BITS) - 1;
 
+/// The number of bytes in a Base64 conversion block
 const B64_BLOCK_BYTES: usize = 3;
+/// The number of Base64 digits in a Base64 conversion block
 const B64_BLOCK_CHARS: usize = 4;
+/// The number of bits in a Base64 conversion block
 const B64_BLOCK_BITS: usize = B64_BLOCK_BYTES * BYTE_BITS;
 
+/// The maximum number of Base64 padding characters at the end of the final block
 const MAX_B64_PAD_CHARS: usize = B64_BLOCK_BYTES - 1;
+/// The Base64 padding character
 const B64_PAD_C: char = '=';
+/// The Base64 padding character, as a byte
 const B64_PAD_B: u8 = B64_PAD_C as u8;
 
+/// Encode char_bits into a Base64 character.
+/// Panics if char_bits is greater than B64_MAX.
 fn base64_encode_char(char_bits: u8) -> char {
     match char_bits {
         n @ 0..=25 => math::add_to_char('A', n),
@@ -30,6 +42,15 @@ fn base64_encode_char(char_bits: u8) -> char {
     }
 }
 
+/// Encode the B64_BLOCK_BYTES bytes in block, into a B64_BLOCK_CHARS character Base64 string.
+///
+/// If the block is less than B64_BLOCK_BYTES long, the caller must zero-fill it.
+/// pad_count is the number of bytes that were zero-filled. The returned string is padded with that
+/// many B64_PAD_C padding characters.
+///
+/// Panics if:
+///  * block is not B64_BLOCK_BYTES long. or
+///  * pad_count is greater than MAX_B64_PAD_CHARS
 fn base64_encode_block(block: &[u8], pad_count: usize) -> String {
     let mut s = String::with_capacity(B64_BLOCK_CHARS);
     assert!(block.len() == B64_BLOCK_BYTES);
@@ -64,6 +85,10 @@ fn base64_encode_block(block: &[u8], pad_count: usize) -> String {
     s
 }
 
+/// Encode bytes into a Base64 string.
+///
+/// If bytes is not a multiple of B64_BLOCK_BYTES long, the returned string is padded with a
+/// B64_PAD_C padding character for each missing byte.
 pub fn base64_encode(bytes: &[u8]) -> String {
     // Each 24 bit block turns 3 bytes into 4 base64 characters
     // Round up the number of blocks
@@ -87,6 +112,8 @@ pub fn base64_encode(bytes: &[u8]) -> String {
     s
 }
 
+/// Decode a Base64 character c into its corresponding B64_CHAR_BITS bits.
+/// Panics on non-Base64 characters, including (partial) multibyte characters.
 fn base64_decode_char(c: char) -> u8 {
     let b = match c {
         n @ 'A'..='Z' => math::char_diff(n, 'A'),
@@ -104,6 +131,15 @@ fn base64_decode_char(c: char) -> u8 {
     b
 }
 
+/// Decode the B64_BLOCK_CHARS Base64 characters in block, into B64_BLOCK_BYTES bytes.
+/// block contains the byte values of the Base64 UTF-8 characters.
+///
+/// Panics if:
+///  * block is not B64_BLOCK_CHARS long,
+///  * block does not have correct Base64 padding,
+///  * block contains non-Base64 characters, including (partial) multibyte characters, or
+///  * block is padded correctly, but the Base64 characters in block leave trailing bits in the padding
+///    bytes.
 fn base64_decode_block(block: &[u8]) -> Vec<u8> {
     let mut v = Vec::<u8>::with_capacity(B64_BLOCK_BYTES);
     // Require correct Base64 padding.
@@ -172,6 +208,15 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
     v
 }
 
+/// Decode a Base64 string s into bytes.
+///
+/// Panics if:
+///  * s is not a multiple of B64_BLOCK_CHARS long,
+///  * the final block in s does not have correct Base64 padding,
+///  * non-terminal blocks in s have Base64 padding,
+///  * s contains non-Base64 characters, including multibyte characters, or
+///  * s is padded correctly, but the Base64 characters in block leave trailing bits in the padding
+///    bytes.
 pub fn base64_decode(s: &str) -> Vec<u8> {
     // Base64 strings must be ASCII
     assert!(s.is_ascii(), "Invalid Base64 string");

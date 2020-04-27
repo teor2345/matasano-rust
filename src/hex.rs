@@ -1,5 +1,7 @@
 //! Hex encoding and decoding
 
+#![deny(missing_docs)]
+
 // I don't want to create a duplicate module here. But I can't get "crate" to work.
 #[path = "math.rs"]
 #[allow(dead_code)]
@@ -7,14 +9,21 @@ mod math;
 
 use math::BYTE_BITS;
 
+/// The number of bits in a hex digit
 const HEX_CHAR_BITS: usize = 4;
 
+/// The maximum value of a hex digit
 const HEX_MAX: u8 = (1u8 << HEX_CHAR_BITS) - 1;
 
+/// The number of bytes in a hex conversion block
 const HEX_BLOCK_BYTES: usize = 1;
+/// The number of hex digits in a hex conversion block
 const HEX_BLOCK_CHARS: usize = 2;
+/// The number of bits in a hex conversion block
 const HEX_BLOCK_BITS: usize = HEX_BLOCK_BYTES * BYTE_BITS;
 
+/// Encode char_bits into a hex character.
+/// Panics if char_bits is greater than HEX_MAX.
 fn hex_encode_char(char_bits: u8) -> char {
     match char_bits {
         n @ 0..=9 => math::add_to_char('0', n),
@@ -23,6 +32,7 @@ fn hex_encode_char(char_bits: u8) -> char {
     }
 }
 
+/// Encode a single-byte block, into a HEX_BLOCK_CHARS character hex string.
 fn hex_encode_block(block: u8) -> String {
     let mut s = String::with_capacity(HEX_BLOCK_CHARS);
 
@@ -36,6 +46,7 @@ fn hex_encode_block(block: u8) -> String {
     s
 }
 
+/// Encode bytes into a hex string.
 pub fn hex_encode(bytes: &[u8]) -> String {
     // Each 8 bit block turns 1 byte into 2 hex characters
     let hex_blocks = bytes.len();
@@ -51,6 +62,8 @@ pub fn hex_encode(bytes: &[u8]) -> String {
     s
 }
 
+/// Decode a hex character c into its corresponding HEX_CHAR_BITS bits.
+/// Panics on non-hex characters, including (partial) multibyte characters.
 fn hex_decode_char(c: char) -> u8 {
     let b = match c {
         n @ '0'..='9' => math::char_diff(n, '0'),
@@ -65,6 +78,12 @@ fn hex_decode_char(c: char) -> u8 {
     b
 }
 
+/// Decode the HEX_BLOCK_CHARS hex characters in block, into a single byte.
+/// block contains the byte values of the hex UTF-8 characters.
+///
+/// Panics if:
+///  * block is not HEX_BLOCK_CHARS long, or
+///  * block contains non-hex characters, including (partial) multibyte characters.
 fn hex_decode_block(block: &[u8]) -> u8 {
     // Hex has no concept of padding, require whole blocks.
     // We might want to change this condition in future, to allow trailing hex nybbles.
@@ -80,6 +99,11 @@ fn hex_decode_block(block: &[u8]) -> u8 {
     (cb0 & 0b1111) << 4 | cb1 & 0b1111
 }
 
+/// Decode a hex string s into bytes.
+///
+/// Panics if:
+///  * s is not a multiple of HEX_BLOCK_CHARS long,
+///  * s contains non-hex characters, including multibyte characters.
 pub fn hex_decode(s: &str) -> Vec<u8> {
     // Hex strings must be ASCII
     assert!(s.is_ascii(), "Invalid hex string");

@@ -1,7 +1,13 @@
 //! Integer and character mathematical utility functions
 
+#![deny(missing_docs)]
+
 pub const BYTE_BITS: usize = 8;
 
+/// Divide n by d, returning (n/d + 1) if there is any remainder
+/// Panics on:
+///  * zero divisor: d == 0, or
+///  * internal overflow: n + d > usize::MAX.
 pub fn ceil_div(n: usize, d: usize) -> usize {
     assert!(d > 0, "The divisor must not be zero");
     assert!(
@@ -16,6 +22,10 @@ pub fn ceil_div(n: usize, d: usize) -> usize {
     (n + d - 1) / d
 }
 
+/// Divide n by d, ensuring that the division is exact
+/// Panics on:
+///  * zero divisor: d == 0, or
+///  * non-zero remainder: n % d != 0.
 pub fn exact_div(n: usize, d: usize) -> usize {
     assert!(d > 0, "The divisor must not be zero");
     assert!(
@@ -29,6 +39,10 @@ pub fn exact_div(n: usize, d: usize) -> usize {
     n / d
 }
 
+/// Advance c by n characters, and return the result
+/// Panics on:
+///  * non-ascii input, or
+///  * non-ascii result.
 pub fn add_to_char(c: char, n: u8) -> char {
     assert!(c.is_ascii());
     let r = ((c as u8) + n) as char;
@@ -37,6 +51,10 @@ pub fn add_to_char(c: char, n: u8) -> char {
     r
 }
 
+/// Returns the number of characters between c and base_char
+/// Panics on:
+///  * non-ascii input (c or base_char), or
+///  * negative difference: c < base_char.
 pub fn char_diff(c: char, base_char: char) -> u8 {
     assert!(c.is_ascii());
     assert!(base_char.is_ascii());
