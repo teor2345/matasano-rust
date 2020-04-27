@@ -36,11 +36,8 @@ fn hex_encode_char(char_bits: u8) -> char {
 fn hex_encode_block(block: u8) -> String {
     let mut s = String::with_capacity(HEX_BLOCK_CHARS);
 
-    let cb0 = (block & 0b11110000) >> 4;
-    let cb1 = block & 0b00001111;
-
-    s.push(hex_encode_char(cb0));
-    s.push(hex_encode_char(cb1));
+    s.push(hex_encode_char((block & 0b11110000) >> 4));
+    s.push(hex_encode_char(block & 0b00001111));
 
     assert!(s.len() == HEX_BLOCK_CHARS);
     s
@@ -52,13 +49,10 @@ pub fn hex_encode(bytes: &[u8]) -> String {
     let hex_blocks = bytes.len();
     let char_count = hex_blocks * HEX_BLOCK_CHARS;
 
-    let mut s = String::with_capacity(char_count);
     // Each byte is a block
-    for block in bytes {
-        s.push_str(&hex_encode_block(*block));
-    }
-
+    let s: String = bytes.iter().map(|b| hex_encode_block(*b)).collect();
     assert!(s.len() == char_count);
+
     s
 }
 
@@ -88,15 +82,13 @@ fn hex_decode_block(block: &[u8]) -> u8 {
     // Hex has no concept of padding, require whole blocks.
     // We might want to change this condition in future, to allow trailing hex nybbles.
     assert!(block.len() == HEX_BLOCK_CHARS);
-
     // The caller should ensure that these are ASCII
-    assert!((block[0] as char).is_ascii());
-    assert!((block[1] as char).is_ascii());
+    assert!(block.iter().all(|b| (*b as char).is_ascii()));
 
-    let cb0 = hex_decode_char(block[0] as char);
-    let cb1 = hex_decode_char(block[1] as char);
+    let c: Vec<u8> = block.iter().map(|b| hex_decode_char(*b as char)).collect();
+    assert!(c.len() == HEX_BLOCK_CHARS);
 
-    (cb0 & 0b1111) << 4 | cb1 & 0b1111
+    (c[0] & 0b1111) << 4 | c[1] & 0b1111
 }
 
 /// Decode a hex string s into bytes.
@@ -113,12 +105,12 @@ pub fn hex_decode(s: &str) -> Vec<u8> {
     // We might want to change this condition in future, to allow trailing hex nybbles.
     let byte_count = math::exact_div(s.len() * HEX_CHAR_BITS, HEX_BLOCK_BITS);
 
-    let mut v = Vec::<u8>::with_capacity(byte_count);
-    // Since the string is ASCII, we can safely iterate over its bytes.
-    let blocks = s.as_bytes().chunks(HEX_BLOCK_CHARS);
-    for block in blocks {
-        v.push(hex_decode_block(block));
-    }
+    // Since the string is ASCII, we can safely iterate over (chunks of) its bytes.
+    let v: Vec<u8> = s
+        .as_bytes()
+        .chunks(HEX_BLOCK_CHARS)
+        .map(|block| hex_decode_block(block))
+        .collect();
 
     assert!(v.len() == byte_count);
     v

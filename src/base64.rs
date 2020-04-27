@@ -52,33 +52,31 @@ fn base64_encode_char(char_bits: u8) -> char {
 ///  * block is not B64_BLOCK_BYTES long. or
 ///  * pad_count is greater than MAX_B64_PAD_CHARS
 fn base64_encode_block(block: &[u8], pad_count: usize) -> String {
-    let mut s = String::with_capacity(B64_BLOCK_CHARS);
     assert!(block.len() == B64_BLOCK_BYTES);
     assert!(pad_count <= MAX_B64_PAD_CHARS);
 
-    let b0 = block[0];
-    let b1 = block[1];
-    let b2 = block[2];
+    let mut s = String::with_capacity(B64_BLOCK_CHARS);
+    let mut c = Vec::<u8>::with_capacity(B64_BLOCK_CHARS);
 
-    let cb0 = (b0 & 0b11111100) >> 2;
-    let cb1 = (b0 & 0b00000011) << 4 | (b1 & 0b11110000) >> 4;
-    let cb2 = (b1 & 0b00001111) << 2 | (b2 & 0b11000000) >> 6;
-    let cb3 = b2 & 0b00111111;
+    c.push((block[0] & 0b11111100) >> 2);
+    c.push((block[0] & 0b00000011) << 4 | (block[1] & 0b11110000) >> 4);
+    c.push((block[1] & 0b00001111) << 2 | (block[2] & 0b11000000) >> 6);
+    c.push(block[2] & 0b00111111);
 
-    s.push(base64_encode_char(cb0));
-    s.push(base64_encode_char(cb1));
+    s.push(base64_encode_char(c[0]));
+    s.push(base64_encode_char(c[1]));
     // Special handling for padding
     if pad_count == 2 {
-        assert!(cb2 == 0);
+        assert!(c[2] == 0);
         s.push(B64_PAD_C);
     } else {
-        s.push(base64_encode_char(cb2));
+        s.push(base64_encode_char(c[2]));
     }
     if pad_count >= 1 {
-        assert!(cb3 == 0);
+        assert!(c[3] == 0);
         s.push(B64_PAD_C);
     } else {
-        s.push(base64_encode_char(cb3));
+        s.push(base64_encode_char(c[3]));
     }
 
     assert!(s.len() == B64_BLOCK_CHARS);
@@ -141,10 +139,12 @@ fn base64_decode_char(c: char) -> u8 {
 ///  * block is padded correctly, but the Base64 characters in block leave trailing bits in the padding
 ///    bytes.
 fn base64_decode_block(block: &[u8]) -> Vec<u8> {
-    let mut v = Vec::<u8>::with_capacity(B64_BLOCK_BYTES);
     // Require correct Base64 padding.
     // We might want to change this condition in future, to allow Base64 without padding.
     assert!(block.len() == B64_BLOCK_CHARS);
+
+    // The caller should ensure that these are ASCII
+    assert!(block.iter().all(|b| (*b as char).is_ascii()));
 
     // There are only two valid paddings:
     // ???=
@@ -170,20 +170,16 @@ fn base64_decode_block(block: &[u8]) -> Vec<u8> {
         _ => unreachable!("block should be a 4-item slice"),
     };
 
-    // The caller should ensure that these are ASCII
-    assert!((block[0] as char).is_ascii());
-    assert!((block[1] as char).is_ascii());
-    assert!((block[2] as char).is_ascii());
-    assert!((block[3] as char).is_ascii());
+    let c: Vec<u8> = block
+        .iter()
+        .map(|b| base64_decode_char(*b as char))
+        .collect();
 
-    let cb0 = base64_decode_char(block[0] as char);
-    let cb1 = base64_decode_char(block[1] as char);
-    let cb2 = base64_decode_char(block[2] as char);
-    let cb3 = base64_decode_char(block[3] as char);
+    let b0 = (c[0] & 0b111111) << 2 | (c[1] & 0b110000) >> 4;
+    let b1 = (c[1] & 0b001111) << 4 | (c[2] & 0b111100) >> 2;
+    let b2 = (c[2] & 0b000011) << 6 | (c[3] & 0b111111);
 
-    let b0 = (cb0 & 0b111111) << 2 | (cb1 & 0b110000) >> 4;
-    let b1 = (cb1 & 0b001111) << 4 | (cb2 & 0b111100) >> 2;
-    let b2 = (cb2 & 0b000011) << 6 | (cb3 & 0b111111);
+    let mut v = Vec::<u8>::with_capacity(B64_BLOCK_BYTES);
 
     v.push(b0);
     if pad_count < 2 {
