@@ -1,5 +1,6 @@
 //! Set 1, Challenge 1, Matasano Cryptopals Challenges
 
+// I don't want to create duplicate modules here. But I can't get "crate" to work.
 #[path = "base64.rs"]
 #[allow(dead_code)]
 mod base64;

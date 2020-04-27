@@ -1,5 +1,6 @@
 //! Base64 encoding and decoding
 
+// I don't want to create a duplicate module here. But I can't get "crate" to work.
 #[path = "math.rs"]
 #[allow(dead_code)]
 mod math;
